@@ -669,5 +669,69 @@
             }
         }, 30000);
     </script>
+    <!-- زر التحديث السريع -->
+<div style="text-align: center; margin: 15px 0;">
+    <button onclick="forceRefreshNow()" style="
+        background: linear-gradient(135deg, #2ecc71, #27ae60);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-size: 13px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 5px;
+    ">
+        <i class="fas fa-bolt"></i>
+        تحديث سريع
+    </button>
+    
+    <button onclick="location.reload()" style="
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-size: 13px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 5px;
+    ">
+        <i class="fas fa-redo"></i>
+        إعادة تحميل
+    </button>
+</div>
+
+<script>
+function forceRefreshNow() {
+    // إرسال إشارة تحديث
+    if (window.forceUpdateForAll) {
+        window.forceUpdateForAll();
+    }
+    
+    // تحديث البيانات المحلية
+    localStorage.setItem('forceRefreshAll', Date.now().toString());
+    
+    // إعادة تحميل البيانات
+    if (window.loadAllData) {
+        window.loadAllData();
+    }
+    
+    // إعادة تحميل الصفحة بعد ثانية
+    setTimeout(() => {
+        location.reload();
+    }, 1000);
+    
+    // إشعار
+    if (window.showNotification) {
+        window.showNotification('🔄 جاري تحديث جميع الزبائن...', 'success');
+    }
+}
+</script>
 </body>
 </html>
+
