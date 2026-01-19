@@ -4,9 +4,56 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>صالون الحلاقة الملكي</title>
-    <link rel="stylesheet" href="style.css">
+    
+    <!-- 🔥 كود منع التخزين المؤقت -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <link rel="stylesheet" href="style.css?v=<?php echo time(); ?>">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        // ⚡ كود إجبار التحديث للزبائن
+        (function() {
+            var forceUpdateKey = 'barbershop_last_update';
+            var now = Date.now();
+            var lastUpdate = localStorage.getItem(forceUpdateKey);
+            
+            // مسح الكاش القديم كل 5 دقائق
+            if (!lastUpdate || (now - parseInt(lastUpdate)) > 300000) {
+                console.log('🔄 مسح الكاش القديم وإعادة التحميل...');
+                
+                // مسح جميع البيانات المخزنة محلياً
+                Object.keys(localStorage).forEach(function(key) {
+                    if (key.includes('barbershop') || key.includes('shop')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+                
+                // تخزين وقت التحديث الجديد
+                localStorage.setItem(forceUpdateKey, now.toString());
+                
+                // إعادة تحميل الصفحة مع بارامتر لمنع التخزين
+                if (window.location.href.indexOf('nocache') === -1) {
+                    var url = window.location.href;
+                    var separator = url.indexOf('?') === -1 ? '?' : '&';
+                    window.location.href = url + separator + 'nocache=' + now;
+                }
+            }
+            
+            // إضافة نسخة ديناميكية للـ CSS
+            document.addEventListener('DOMContentLoaded', function() {
+                var links = document.querySelectorAll('link[rel="stylesheet"]');
+                links.forEach(function(link) {
+                    if (link.href && !link.href.includes('cdnjs') && !link.href.includes('googleapis')) {
+                        link.href = link.href.split('?')[0] + '?v=' + now;
+                    }
+                });
+            });
+        })();
+    </script>
 </head>
 <body>
     <div class="container">
@@ -31,8 +78,6 @@
                 <p class="shop-subtitle" data-i18n="app.subtitle">أفضل خدمات الحلاقة والتجميل</p>
             </div>
         </header>
-
-
 
         <!-- Waiting Customers -->
         <section class="waiting-section">
@@ -309,221 +354,320 @@
         </div>
     </div>
 
-    <script src="i18n.js"></script>
-    <script src="script.js"></script>
-    <script src="api-integration.js"></script>
+    <script src="i18n.js?v=<?php echo time(); ?>"></script>
+    <script src="script.js?v=<?php echo time(); ?>"></script>
+    <script src="api-integration.js?v=<?php echo time(); ?>"></script>
     <script>window.__apiIntegrationLoaded = true;</script>
-  <script type="module" src="./firebase-init.js"></script>
   
-  <!-- Firestore Integration - نظام موحد لجميع البيانات -->
-  <script type="module">
-    import { getApp } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js';
-    import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js';
-    import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js';
+    <!-- Firebase Integration مع تحديثات الوقت الحقيقي -->
+    <script type="module">
+        import { getApp } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js';
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, Timestamp } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js';
+        import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js';
 
-    // استخدم التطبيق الافتراضي الذي تم تهيئته في firebase-init.js
-    const app = getApp();
-    const auth = getAuth(app);
-    try {
-      await signInAnonymously(auth);
-      console.log('Firebase Auth: تم تسجيل الدخول المجهول بنجاح');
-    } catch (e) {
-      console.warn('Firebase Auth: فشل التسجيل المجهول، سيتم الاعتماد على قواعد القراءة العامة إن وُجدت:', e?.code || e?.message || e);
-    }
-    const db = getFirestore(app);
-
-    // مراجع الوثائق
-    const settingsDoc = doc(db, 'siteSettings', 'main');
-    const contactsDoc = doc(db, 'siteContacts', 'main');
-    const galleryDoc = doc(db, 'siteGallery', 'main');
-    const backgroundDoc = doc(db, 'siteBackground', 'main');
-
-    // تطبيق الإعدادات القادمة من Firestore على الواجهة
-    function applySettings(settings) {
-      if (!settings || typeof settings !== 'object') return;
-      try {
-        if (typeof window.shopSettings === 'undefined') window.shopSettings = {};
-        window.shopSettings = { ...window.shopSettings, ...settings };
-        const nameEl = document.querySelector('.shop-name');
-        const subtitleEl = document.querySelector('.shop-subtitle');
-        if (nameEl && window.shopSettings?.name) nameEl.textContent = window.shopSettings.name;
-        if (subtitleEl && window.shopSettings?.subtitle) subtitleEl.textContent = window.shopSettings.subtitle;
-        if (typeof window.updateChairCount === 'function' && typeof window.shopSettings?.chairCount === 'number') {
-          window.updateChairCount(window.shopSettings.chairCount);
+        // تهيئة Firebase
+        const app = getApp();
+        const auth = getAuth(app);
+        
+        // تسجيل دخول مجهول
+        try {
+            await signInAnonymously(auth);
+            console.log('✅ Firebase: تم تسجيل الدخول المجهول بنجاح');
+        } catch (e) {
+            console.warn('⚠️ Firebase: فشل التسجيل المجهول', e);
         }
-        if (typeof window.shopSettings?.maxWaiting === 'number') {
-          const wcEl = document.getElementById('maxWaiting');
-          if (wcEl) wcEl.value = String(window.shopSettings.maxWaiting);
+        
+        const db = getFirestore(app);
+
+        // مراجع الوثائق
+        const settingsDoc = doc(db, 'siteSettings', 'main');
+        const contactsDoc = doc(db, 'siteContacts', 'main');
+        const galleryDoc = doc(db, 'siteGallery', 'main');
+        const backgroundDoc = doc(db, 'siteBackground', 'main');
+        const updateDoc = doc(db, 'systemUpdates', 'lastUpdate');
+
+        // 🔥 دالة محسنة لتحميل البيانات من Firebase
+        async function loadAllData() {
+            console.log('🔄 جاري تحميل البيانات من Firebase...');
+            
+            try {
+                // مسح الكاش المحلي أولاً
+                localStorage.removeItem('barbershopSettings');
+                localStorage.removeItem('barbershopContacts');
+                localStorage.removeItem('barbershopGallery');
+                localStorage.removeItem('barbershopBackground');
+                
+                // جلب البيانات من Firebase
+                const [settingsSnap, contactsSnap, gallerySnap, backgroundSnap] = await Promise.all([
+                    getDoc(settingsDoc),
+                    getDoc(contactsDoc),
+                    getDoc(galleryDoc),
+                    getDoc(backgroundDoc)
+                ]);
+
+                // تطبيق البيانات
+                if (settingsSnap.exists()) {
+                    const data = settingsSnap.data();
+                    applySettings(data);
+                    console.log('✅ Firebase: تم تحميل الإعدادات');
+                }
+                
+                if (contactsSnap.exists()) {
+                    const data = contactsSnap.data();
+                    if (data.contacts) applyContacts(data.contacts);
+                    console.log('✅ Firebase: تم تحميل جهات الاتصال');
+                }
+                
+                if (gallerySnap.exists()) {
+                    const data = gallerySnap.data();
+                    if (data.images) applyGallery(data.images);
+                    console.log('✅ Firebase: تم تحميل المعرض');
+                }
+                
+                if (backgroundSnap.exists()) {
+                    const data = backgroundSnap.data();
+                    if (data.background) applyBackground(data.background);
+                    console.log('✅ Firebase: تم تحميل الخلفية');
+                }
+                
+                // تحديث وقت آخر تحميل
+                localStorage.setItem('lastFirebaseLoad', Date.now().toString());
+                
+            } catch (error) {
+                console.error('❌ Firebase: فشل تحميل البيانات:', error);
+            }
         }
-        if (settings.color) document.body.style.backgroundColor = settings.color;
-        // حفظ محلي
-        try { localStorage.setItem('barbershopSettings', JSON.stringify(window.shopSettings)); } catch {}
-        console.log('Firestore: تم تطبيق الإعدادات بنجاح');
-      } catch (e) {
-        console.warn('Firestore: فشل تطبيق الإعدادات', e);
-      }
-    }
 
-    // تطبيق جهات الاتصال
-    function applyContacts(contacts) {
-      try {
-        window.contacts = Array.isArray(contacts) ? contacts : [];
-        localStorage.setItem('barbershopContacts', JSON.stringify(window.contacts));
-        if (typeof window.displayContactsInSettings === 'function') window.displayContactsInSettings();
-        if (typeof window.displayContactsOnMainPage === 'function') window.displayContactsOnMainPage();
-        console.log('Firestore: تم تطبيق جهات الاتصال بنجاح');
-      } catch (e) {
-        console.warn('Firestore: فشل تطبيق جهات الاتصال', e);
-      }
-    }
+        // 🔥 مراقبة التغييرات في الوقت الحقيقي
+        function setupRealtimeListeners() {
+            console.log('👂 جاري تفعيل المراقبة الحية...');
+            
+            // مراقبة الإعدادات
+            onSnapshot(settingsDoc, (docSnap) => {
+                if (docSnap.exists()) {
+                    console.log('🔄 تحديث الإعدادات لحظياً');
+                    applySettings(docSnap.data());
+                    
+                    // تحديث الواجهة
+                    if (typeof window.updateSettingsDisplay === 'function') {
+                        window.updateSettingsDisplay();
+                    }
+                }
+            });
 
-    // تطبيق المعرض
-    function applyGallery(images) {
-      try {
-        window.galleryImages = Array.isArray(images) ? images : [];
-        localStorage.setItem('barbershopGallery', JSON.stringify(window.galleryImages));
-        if (typeof window.updateGalleryUI === 'function') window.updateGalleryUI();
-        console.log('Firestore: تم تطبيق المعرض بنجاح');
-      } catch (e) {
-        console.warn('Firestore: فشل تطبيق المعرض', e);
-      }
-    }
+            // مراقبة جهات الاتصال
+            onSnapshot(contactsDoc, (docSnap) => {
+                if (docSnap.exists() && docSnap.data().contacts) {
+                    console.log('🔄 تحديث جهات الاتصال لحظياً');
+                    applyContacts(docSnap.data().contacts);
+                }
+            });
 
-    // تطبيق الخلفية
-    function applyBackground(bg) {
-      try {
-        window.currentBackground = bg || null;
-        localStorage.setItem('barbershopBackground', JSON.stringify(window.currentBackground));
-        if (typeof window.applyBackgroundImage === 'function') window.applyBackgroundImage();
-        console.log('Firestore: تم تطبيق الخلفية بنجاح');
-      } catch (e) {
-        console.warn('Firestore: فشل تطبيق الخلفية', e);
-      }
-    }
+            // مراقبة المعرض
+            onSnapshot(galleryDoc, (docSnap) => {
+                if (docSnap.exists() && docSnap.data().images) {
+                    console.log('🔄 تحديث المعرض لحظياً');
+                    applyGallery(docSnap.data().images);
+                }
+            });
 
-    // حفظ البيانات إلى Firestore
-    async function saveSettings() {
-      try {
-        const payload = typeof window.shopSettings === 'object' ? window.shopSettings : {};
-        await setDoc(settingsDoc, payload, { merge: true });
-        console.log('Firestore: تم حفظ الإعدادات بنجاح');
-      } catch (e) {
-        console.error('Firestore: فشل حفظ الإعدادات', e);
-      }
-    }
+            // مراقبة الخلفية
+            onSnapshot(backgroundDoc, (docSnap) => {
+                if (docSnap.exists() && docSnap.data().background) {
+                    console.log('🔄 تحديث الخلفية لحظياً');
+                    applyBackground(docSnap.data().background);
+                }
+            });
+        }
 
-    async function saveContacts() {
-      try {
-        const contacts = Array.isArray(window.contacts) ? window.contacts : [];
-        await setDoc(contactsDoc, { contacts }, { merge: true });
-        console.log('Firestore: تم حفظ جهات الاتصال بنجاح');
-      } catch (e) {
-        console.error('Firestore: فشل حفظ جهات الاتصال', e);
-      }
-    }
+        // 🔥 دالة لتسجيل تحديث جديد
+        async function markUpdate() {
+            try {
+                await setDoc(updateDoc, {
+                    timestamp: Timestamp.now(),
+                    forceReload: false,
+                    updatedBy: 'admin'
+                }, { merge: true });
+                console.log('✅ Firebase: تم تسجيل تحديث جديد');
+            } catch (error) {
+                console.error('❌ Firebase: فشل تسجيل التحديث:', error);
+            }
+        }
 
-    async function saveGallery() {
-      try {
-        const images = Array.isArray(window.galleryImages) ? window.galleryImages : [];
-        await setDoc(galleryDoc, { images }, { merge: true });
-        console.log('Firestore: تم حفظ المعرض بنجاح');
-      } catch (e) {
-        console.error('Firestore: فشل حفظ المعرض', e);
-      }
-    }
+        // 🔥 تحديث تلقائي كل دقيقة
+        setInterval(async () => {
+            try {
+                const updateSnap = await getDoc(updateDoc);
+                const lastLocalUpdate = localStorage.getItem('lastUpdateCheck');
+                const currentTime = Date.now();
+                
+                if (updateSnap.exists()) {
+                    const serverUpdate = updateSnap.data().timestamp?.toMillis() || 0;
+                    
+                    if (!lastLocalUpdate || serverUpdate > parseInt(lastLocalUpdate)) {
+                        console.log('🔄 اكتشاف تحديث جديد من الخادم');
+                        localStorage.setItem('lastUpdateCheck', serverUpdate.toString());
+                        
+                        // إعادة تحميل البيانات
+                        await loadAllData();
+                        
+                        // إعادة تحميل الصفحة إذا طلب الخادم ذلك
+                        if (updateSnap.data().forceReload) {
+                            console.log('🔄 إعادة تحميل الصفحة بناءً على طلب الخادم');
+                            location.reload();
+                        }
+                    }
+                }
+            } catch (error) {
+                console.warn('⚠️ فشل التحقق من التحديثات:', error);
+            }
+        }, 60000); // كل دقيقة
 
-    async function saveBackground() {
-      try {
-        const bg = window.currentBackground || null;
-        await setDoc(backgroundDoc, { background: bg }, { merge: true });
-        console.log('Firestore: تم حفظ الخلفية بنجاح');
-      } catch (e) {
-        console.error('Firestore: فشل حفظ الخلفية', e);
-      }
-    }
+        // 🔥 ربط دوال الحفظ مع Firebase
+        window.saveSettings = async function() {
+            try {
+                const settings = {
+                    name: document.getElementById('shopName')?.value || 'صالون الحلاقة الملكي',
+                    subtitle: document.getElementById('shopSubtitle')?.value || 'أفضل خدمات الحلاقة والتجميل',
+                    chairCount: parseInt(document.getElementById('chairCount')?.value || 3),
+                    maxWaiting: parseInt(document.getElementById('maxWaiting')?.value || 20),
+                    updatedAt: Timestamp.now()
+                };
+                
+                await setDoc(settingsDoc, settings, { merge: true });
+                await markUpdate();
+                console.log('✅ Firebase: تم حفظ الإعدادات');
+                alert('✅ تم حفظ التغييرات وسيظهر للزبائن خلال ثوانٍ');
+            } catch (error) {
+                console.error('❌ Firebase: فشل حفظ الإعدادات:', error);
+                alert('⚠️ حدث خطأ في الحفظ، حاول مرة أخرى');
+            }
+        };
 
-    // تحميل البيانات الأولية
-    async function loadAllData() {
-      try {
-        const [settingsSnap, contactsSnap, gallerySnap, backgroundSnap] = await Promise.all([
-          getDoc(settingsDoc),
-          getDoc(contactsDoc),
-          getDoc(galleryDoc),
-          getDoc(backgroundDoc)
-        ]);
+        // تطبيق البيانات على الواجهة
+        function applySettings(data) {
+            if (!data) return;
+            
+            try {
+                // تحديث الاسم والوصف
+                const nameEl = document.querySelector('.shop-name');
+                const subtitleEl = document.querySelector('.shop-subtitle');
+                
+                if (nameEl && data.name) nameEl.textContent = data.name;
+                if (subtitleEl && data.subtitle) subtitleEl.textContent = data.subtitle;
+                
+                // تحديث إعدادات الكراسي
+                if (typeof window.updateChairCount === 'function' && data.chairCount) {
+                    window.updateChairCount(data.chairCount);
+                }
+                
+                // تحديث الحد الأقصى للعملاء
+                if (data.maxWaiting) {
+                    const maxWaitingEl = document.getElementById('maxWaiting');
+                    if (maxWaitingEl) maxWaitingEl.value = data.maxWaiting;
+                }
+                
+                console.log('✅ تم تطبيق الإعدادات على الواجهة');
+            } catch (error) {
+                console.warn('⚠️ فشل تطبيق الإعدادات:', error);
+            }
+        }
 
-        if (settingsSnap.exists()) applySettings(settingsSnap.data());
-        if (contactsSnap.exists()) applyContacts(contactsSnap.data().contacts);
-        if (gallerySnap.exists()) applyGallery(gallerySnap.data().images);
-        if (backgroundSnap.exists()) applyBackground(backgroundSnap.data().background);
+        function applyContacts(contacts) {
+            if (!Array.isArray(contacts)) return;
+            window.contacts = contacts;
+            if (typeof window.displayContactsOnMainPage === 'function') {
+                window.displayContactsOnMainPage();
+            }
+        }
 
-        console.log('Firestore: تم تحميل جميع البيانات بنجاح');
-      } catch (e) {
-        console.error('Firestore: فشل تحميل البيانات', e);
-      }
-    }
+        function applyGallery(images) {
+            if (!Array.isArray(images)) return;
+            window.galleryImages = images;
+            if (typeof window.updateGalleryUI === 'function') {
+                window.updateGalleryUI();
+            }
+        }
 
-    // مراقبة التغييرات في الوقت الحقيقي
-    onSnapshot(settingsDoc, (docSnap) => {
-      if (docSnap.exists()) {
-        console.log('Firestore: تحديث الإعدادات لحظياً');
-        applySettings(docSnap.data());
-      }
-    });
+        function applyBackground(background) {
+            window.currentBackground = background;
+            if (typeof window.applyBackgroundImage === 'function') {
+                window.applyBackgroundImage();
+            }
+        }
 
-    onSnapshot(contactsDoc, (docSnap) => {
-      if (docSnap.exists()) {
-        console.log('Firestore: تحديث جهات الاتصال لحظياً');
-        applyContacts(docSnap.data().contacts);
-      }
-    });
+        // 🔥 تهيئة النظام عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🚀 بدء تحميل النظام...');
+            
+            // تحميل البيانات
+            await loadAllData();
+            
+            // تفعيل المراقبة الحية
+            setupRealtimeListeners();
+            
+            // إظهار رسالة نجاح
+            setTimeout(() => {
+                console.log('✅ النظام جاهز - جميع الزبائن سيشاهدون التحديثات فوراً');
+            }, 1000);
+        });
 
-    onSnapshot(galleryDoc, (docSnap) => {
-      if (docSnap.exists()) {
-        console.log('Firestore: تحديث المعرض لحظياً');
-        applyGallery(docSnap.data().images);
-      }
-    });
+        // تصدير الدوال للاستخدام العام
+        window.loadAllData = loadAllData;
+        window.markUpdate = markUpdate;
+        
+    </script>
 
-    onSnapshot(backgroundDoc, (docSnap) => {
-      if (docSnap.exists()) {
-        console.log('Firestore: تحديث الخلفية لحظياً');
-        applyBackground(docSnap.data().background);
-      }
-    });
-
-    // ربط عمليات الحفظ الموجودة
-    function wrapAfter(fnName, after){
-      const orig = window[fnName];
-      if (typeof orig !== 'function') return;
-      window[fnName] = function(){
-        const r = orig.apply(this, arguments);
-        try { after.apply(this, arguments); } catch(_) {}
-        return r;
-      };
-    }
-
-    // تصدير الدوال للاستخدام العام
-    window.saveSettings = saveSettings;
-    window.saveContacts = saveContacts;
-    window.saveGallery = saveGallery;
-    window.saveBackground = saveBackground;
-    window.loadAllData = loadAllData;
-
-    // تهيئة النظام عند تحميل الصفحة
-    document.addEventListener('DOMContentLoaded', () => {
-      loadAllData();
-      
-      // ربط عمليات الحفظ
-      wrapAfter('saveSettings', () => { saveSettings().catch(console.warn); });
-      wrapAfter('resetSettings', () => { saveSettings().catch(console.warn); });
-      wrapAfter('saveContacts', () => { saveContacts().catch(console.warn); });
-      wrapAfter('deleteContact', () => { saveContacts().catch(console.warn); });
-      wrapAfter('handleImageFiles', () => { saveGallery().catch(console.warn); });
-      wrapAfter('deleteImage', () => { saveGallery().catch(console.warn); });
-      wrapAfter('saveBackgroundImage', () => { saveBackground().catch(console.warn); });
-      wrapAfter('removeBackground', () => { saveBackground().catch(console.warn); });
-    });
-  </script>
+    <!-- 🔥 كود إضافي لتأكيد التحديث للزبائن -->
+    <script>
+        // عرض إشعار عند وجود تحديثات جديدة
+        function showUpdateNotification() {
+            if (Notification.permission === "granted") {
+                new Notification("صالون الحلاقة الملكي", {
+                    body: "تم تحديث المعلومات! اضغط للتحديث",
+                    icon: "https://cdn-icons-png.flaticon.com/512/3050/3050525.png"
+                });
+            }
+        }
+        
+        // طلب إذن الإشعارات
+        if ("Notification" in window && Notification.permission === "default") {
+            Notification.requestPermission();
+        }
+        
+        // إضافة زر تحديث يدوي في الزاوية
+        const updateButton = document.createElement('button');
+        updateButton.innerHTML = '<i class="fas fa-sync-alt"></i>';
+        updateButton.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: #2ecc71;
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            display: none;
+        `;
+        updateButton.onclick = function() {
+            localStorage.removeItem('lastFirebaseLoad');
+            localStorage.removeItem('lastUpdateCheck');
+            location.reload();
+        };
+        document.body.appendChild(updateButton);
+        
+        // إظهار زر التحديث عند الحاجة
+        setInterval(() => {
+            const lastLoad = localStorage.getItem('lastFirebaseLoad');
+            if (lastLoad && (Date.now() - parseInt(lastLoad)) > 300000) { // بعد 5 دقائق
+                updateButton.style.display = 'block';
+            }
+        }, 30000);
+    </script>
 </body>
 </html>
