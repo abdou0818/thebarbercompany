@@ -17,6 +17,218 @@ let shopSettings = {
 // Ensure i18n can see current settings
 window.shopSettings = shopSettings;
 
+// =================== 🔥 نظام التحديث الفوري من Firebase ===================
+
+// 🔥 دالة للتحديث الفوري للجميع
+window.forceUpdateForAll = function() {
+    console.log('🚀 إجبار التحديث لجميع المستخدمين...');
+    
+    // إرسال إشارة تحديث إلى Firebase
+    if (window.firebase && window.firebase.database) {
+        try {
+            const db = window.firebase.database();
+            db.ref('siteUpdates/lastUpdate').set(Date.now())
+                .then(() => console.log('✅ تم إرسال إشارة التحديث للجميع'))
+                .catch(err => console.error('❌ فشل إرسال التحديث:', err));
+        } catch (e) {
+            console.warn('⚠️ Firebase Database غير متاح:', e);
+        }
+    }
+    
+    // تحديث localStorage لجميع البيانات
+    const updateTime = Date.now();
+    localStorage.setItem('forceRefreshAll', updateTime.toString());
+    localStorage.setItem('lastGlobalUpdate', updateTime.toString());
+    
+    // تحديث جميع الصفحات المفتوحة
+    broadcastUpdateToAllTabs();
+    
+    // إشعار المستخدم
+    if (window.showNotification) {
+        window.showNotification('✅ تم إرسال التحديث لجميع الزبائن', 'success');
+    }
+    
+    return true;
+};
+
+// 🔥 دالة للتحقق من التحديثات الجديدة
+window.checkForUpdates = function() {
+    const lastCheck = localStorage.getItem('lastUpdateCheck') || 0;
+    const now = Date.now();
+    
+    // إذا مر أكثر من 30 ثانية منذ آخر تحقق
+    if (now - parseInt(lastCheck) > 30000) {
+        localStorage.setItem('lastUpdateCheck', now.toString());
+        
+        // تحديث من Firebase
+        if (window.loadAllData) {
+            window.loadAllData().then(() => {
+                console.log('✅ تم التحقق من التحديثات بنجاح');
+                if (window.showNotification) {
+                    window.showNotification('✅ تم تحديث البيانات', 'success');
+                }
+            }).catch(console.warn);
+        }
+    }
+    return true;
+};
+
+// 🔥 بث التحديث لجميع التبويبات المفتوحة
+function broadcastUpdateToAllTabs() {
+    if ('BroadcastChannel' in window) {
+        try {
+            const updateChannel = new BroadcastChannel('barbershop_updates');
+            updateChannel.postMessage({
+                type: 'forceUpdate',
+                timestamp: Date.now(),
+                source: 'admin'
+            });
+            console.log('📡 تم بث التحديث لجميع التبويبات');
+        } catch (e) {
+            console.warn('⚠️ فشل بث التحديث:', e);
+        }
+    }
+}
+
+// 🔥 الاستماع للتحديثات من التبويبات الأخرى
+if ('BroadcastChannel' in window) {
+    const updateChannel = new BroadcastChannel('barbershop_updates');
+    updateChannel.onmessage = (event) => {
+        if (event.data.type === 'forceUpdate') {
+            console.log('📡 تلقيت تحديثاً من تبويب آخر');
+            
+            // مسح الكاش المحلي
+            localStorage.removeItem('lastSystemUpdate');
+            localStorage.removeItem('lastUpdateCheck');
+            
+            // إعادة تحميل البيانات
+            if (window.loadAllData) {
+                window.loadAllData();
+            }
+            
+            // إعادة تحميل الصفحة إذا كانت هناك تغييرات كبيرة
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        }
+    };
+}
+
+// 🔥 تحديث تلقائي من Firebase مباشرة
+(function setupRealTimeFirebaseRefresh() {
+    console.log('🚀 بدء نظام التحديث التلقائي...');
+    
+    // رابط فريد للتحديث يختلف لكل مستخدم
+    const USER_ID = 'user_' + Math.random().toString(36).substr(2, 9);
+    let lastFirebaseUpdate = null;
+    let refreshInterval = null;
+    
+    function startRefreshSystem() {
+        // تأكد من عدم وجود فاصل زمني سابق
+        if (refreshInterval) clearInterval(refreshInterval);
+        
+        // تحديث كل 3 ثواني - سريع جداً
+        refreshInterval = setInterval(async () => {
+            try {
+                // التحقق من تحديثات Firebase Realtime Database
+                if (window.firebase && window.firebase.database) {
+                    const db = window.firebase.database();
+                    const updateRef = db.ref('siteUpdates/lastUpdate');
+                    
+                    updateRef.once('value', (snapshot) => {
+                        const newUpdate = snapshot.val();
+                        
+                        if (newUpdate && newUpdate !== lastFirebaseUpdate) {
+                            console.log('🔄 اكتشاف تحديث جديد من Firebase!');
+                            lastFirebaseUpdate = newUpdate;
+                            
+                            // تحديث جميع البيانات
+                            if (window.loadAllData) window.loadAllData();
+                            if (window.loadContacts) window.loadContacts();
+                            if (window.loadGalleryImages) window.loadGalleryImages();
+                            if (window.loadBackgroundImage) window.loadBackgroundImage();
+                            
+                            // إعادة تحميل الصفحة إذا كانت التغييرات كبيرة
+                            const lastFullReload = localStorage.getItem('lastFullReload') || 0;
+                            if (Date.now() - parseInt(lastFullReload) > 30000) {
+                                localStorage.setItem('lastFullReload', Date.now().toString());
+                                console.log('🔄 إعادة تحميل الصفحة للتحديثات الكبيرة');
+                                location.reload();
+                            }
+                        }
+                    }).catch(() => {
+                        // إذا فشل Firebase، استخدم localStorage كبديل
+                        checkLocalStorageUpdates();
+                    });
+                } else {
+                    // إذا لم يكن Firebase متاحاً، استخدم localStorage
+                    checkLocalStorageUpdates();
+                }
+                
+                // طريقة بديلة: التحقق من localStorage للتحديثات
+                const lastLocalUpdate = localStorage.getItem('lastSystemUpdate');
+                const serverTime = Date.now();
+                
+                // إذا مرت 10 ثواني منذ آخر تحديث، تحديث البيانات
+                if (!lastLocalUpdate || (serverTime - parseInt(lastLocalUpdate)) > 10000) {
+                    localStorage.setItem('lastSystemUpdate', serverTime.toString());
+                    
+                    // تحديث جميع البيانات المخزنة محلياً
+                    if (window.loadAllData) {
+                        try { await window.loadAllData(); } catch(e) { console.warn('⚠️', e); }
+                    }
+                }
+                
+            } catch (error) {
+                console.warn('⚠️ فشل في التحديث التلقائي:', error);
+            }
+        }, 3000); // كل 3 ثواني
+        
+        console.log('✅ نظام التحديث التلقائي يعمل كل 3 ثواني');
+    }
+    
+    function checkLocalStorageUpdates() {
+        const globalUpdate = localStorage.getItem('lastGlobalUpdate');
+        const myLastUpdate = localStorage.getItem('myLastUpdate') || 0;
+        
+        if (globalUpdate && parseInt(globalUpdate) > parseInt(myLastUpdate)) {
+            console.log('🔄 اكتشاف تحديث من localStorage');
+            localStorage.setItem('myLastUpdate', globalUpdate);
+            
+            // إعادة تحميل البيانات
+            if (window.loadAllData) window.loadAllData();
+            if (window.loadContacts) window.loadContacts();
+            if (window.loadGalleryImages) window.loadGalleryImages();
+            if (window.loadBackgroundImage) window.loadBackgroundImage();
+            
+            // إعادة تحميل الصفحة
+            setTimeout(() => {
+                location.reload();
+            }, 500);
+        }
+    }
+    
+    // بدء النظام بعد تحميل الصفحة
+    setTimeout(() => {
+        startRefreshSystem();
+    }, 2000);
+    
+    // تحديث فوري عند فتح الصفحة
+    setTimeout(() => {
+        if (window.loadAllData) {
+            window.loadAllData().catch(console.warn);
+        }
+    }, 1000);
+    
+    // علامة في localStorage لمعرفة إذا كان النظام يعمل
+    localStorage.setItem('autoRefreshActive', 'true');
+    localStorage.setItem('userSessionId', USER_ID);
+    
+    console.log('✅ نظام التحديث التلقائي مفعل للمستخدم:', USER_ID);
+})();
+
+// =================== 🔥 نهاية نظام التحديث ===================
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
     // Load saved settings first (so UI respects custom name/subtitle)
@@ -29,6 +241,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Sync shared data from server (settings, contacts, gallery, background)
     try { syncWithServerOnLoad(); } catch (_) {}
+    
+    // 🔥 بدء التحديث التلقائي فور تحميل الصفحة
+    setTimeout(() => {
+        if (window.checkForUpdates) window.checkForUpdates();
+    }, 3000);
 });
 
 // Customer management functions
@@ -37,6 +254,11 @@ function addCustomer() {
     updateWaitingCount();
     showNotification(t('notify.addCustomer'), 'success');
     animateCounter();
+    
+    // 🔥 إرسال تحديث للجميع
+    setTimeout(() => {
+        if (window.forceUpdateForAll) window.forceUpdateForAll();
+    }, 100);
 }
 
 function removeCustomer() {
@@ -45,6 +267,11 @@ function removeCustomer() {
         updateWaitingCount();
         showNotification(t('notify.removeCustomer'), 'info');
         animateCounter();
+        
+        // 🔥 إرسال تحديث للجميع
+        setTimeout(() => {
+            if (window.forceUpdateForAll) window.forceUpdateForAll();
+        }, 100);
     } else {
         showNotification(t('notify.noCustomers'), 'warning');
     }
@@ -55,6 +282,11 @@ function resetQueue() {
     updateWaitingCount();
     showNotification(t('notify.resetQueue'), 'info');
     animateCounter();
+    
+    // 🔥 إرسال تحديث للجميع
+    setTimeout(() => {
+        if (window.forceUpdateForAll) window.forceUpdateForAll();
+    }, 100);
 }
 
 // Chair management functions
@@ -79,8 +311,18 @@ function toggleChair(chairNumber) {
                 chairStates[chairNumber] = 'occupied';
                 updateChairState(chairNumber);
                 showNotification(t('notify.movedToChair', { n: chairNumber }), 'success');
+                
+                // 🔥 إرسال تحديث للجميع
+                setTimeout(() => {
+                    if (window.forceUpdateForAll) window.forceUpdateForAll();
+                }, 100);
             }
         }, 500);
+    } else {
+        // 🔥 إرسال تحديث للجميع
+        setTimeout(() => {
+            if (window.forceUpdateForAll) window.forceUpdateForAll();
+        }, 100);
     }
 }
 
@@ -379,6 +621,7 @@ function closeSettingsModal() {
     document.getElementById('settingsModal').style.display = 'none';
 }
 
+// =================== 🔥 دالة saveSettings المعدلة ===================
 function saveSettings() {
     const newName = document.getElementById('shopName').value.trim();
     const newSubtitle = document.getElementById('shopSubtitle').value.trim();
@@ -420,9 +663,19 @@ function saveSettings() {
     document.querySelector('.shop-name').textContent = newName;
     document.querySelector('.shop-subtitle').textContent = newSubtitle;
     
-    // Persist settings locally for reloads
-    try { localStorage.setItem('barbershopSettings', JSON.stringify(shopSettings)); } catch (_) {}
-
+    // 🔥 حفظ في Firebase أولاً
+    if (window.saveSettingsToFirebase) {
+        window.saveSettingsToFirebase(shopSettings);
+    } else {
+        // إذا لم يكن Firebase متاحاً، استخدم localStorage
+        try { localStorage.setItem('barbershopSettings', JSON.stringify(shopSettings)); } catch (_) {}
+    }
+    
+    // 🔥 إرسال إشارة تحديث للجميع
+    if (window.forceUpdateForAll) {
+        window.forceUpdateForAll();
+    }
+    
     // Handle chair count changes
     if (newChairCount !== Object.keys(chairStates).length) {
         updateChairCount(newChairCount);
@@ -432,8 +685,19 @@ function saveSettings() {
     saveState();
     
     closeSettingsModal();
-    showNotification(t('notify.settingsSaved'), 'success');
+    showNotification('✅ تم الحفظ وسيظهر للزبائن خلال 3-5 ثوانٍ', 'success');
+    
+    // 🔥 تحديث فوري للصفحة الحالية
+    setTimeout(() => {
+        if (window.loadAllData) window.loadAllData();
+    }, 500);
+    
+    // 🔥 إعادة تحميل الصفحة بعد حفظ الإعدادات
+    setTimeout(() => {
+        location.reload();
+    }, 1500);
 }
+// =================== 🔥 نهاية الدالة المعدلة ===================
 
 function changePassword(currentPass, newPass, confirmPass) {
     if (currentPass !== adminPassword) {
@@ -489,8 +753,18 @@ function resetSettings() {
         // Save default settings so reload keeps them
         try { localStorage.setItem('barbershopSettings', JSON.stringify(shopSettings)); } catch (_) {}
         
+        // 🔥 إرسال تحديث للجميع
+        if (window.forceUpdateForAll) {
+            window.forceUpdateForAll();
+        }
+        
         closeSettingsModal();
         showNotification(t('notify.resetSettingsDone'), 'info');
+        
+        // 🔥 إعادة تحميل الصفحة
+        setTimeout(() => {
+            location.reload();
+        }, 1000);
     }
 }
 
@@ -518,6 +792,13 @@ function updateChairCount(newCount) {
         `;
         
         chairsGrid.appendChild(chairCard);
+    }
+    
+    // 🔥 إرسال تحديث للجميع
+    if (window.forceUpdateForAll) {
+        setTimeout(() => {
+            window.forceUpdateForAll();
+        }, 500);
     }
 }
 
@@ -633,6 +914,13 @@ function addContact() {
     saveContacts();
     
     showNotification(t('notify.contactAdded'), 'success');
+    
+    // 🔥 إرسال تحديث للجميع
+    if (window.forceUpdateForAll) {
+        setTimeout(() => {
+            window.forceUpdateForAll();
+        }, 100);
+    }
 }
 
 function deleteContact(contactId) {
@@ -641,6 +929,13 @@ function deleteContact(contactId) {
     displayContactsOnMainPage();
     saveContacts();
     showNotification(t('notify.contactDeleted'), 'info');
+    
+    // 🔥 إرسال تحديث للجميع
+    if (window.forceUpdateForAll) {
+        setTimeout(() => {
+            window.forceUpdateForAll();
+        }, 100);
+    }
 }
 
 function displayContactsInSettings() {
@@ -702,6 +997,11 @@ function displayContactsOnMainPage() {
 
 function saveContacts() {
     localStorage.setItem('barbershopContacts', JSON.stringify(contacts));
+    
+    // 🔥 حفظ في Firebase إذا كان متاحاً
+    if (window.saveContactsToFirebase) {
+        window.saveContactsToFirebase(contacts);
+    }
 }
 
 function loadContacts() {
@@ -773,6 +1073,13 @@ function handleImageFiles(files) {
                 displayGalleryOnMainPage();
                 displayGalleryInSettings();
                 showNotification('تم رفع الصورة بنجاح', 'success');
+                
+                // 🔥 إرسال تحديث للجميع
+                if (window.forceUpdateForAll) {
+                    setTimeout(() => {
+                        window.forceUpdateForAll();
+                    }, 100);
+                }
             };
             reader.readAsDataURL(file);
         } else {
@@ -794,6 +1101,13 @@ function deleteImage(imageId) {
         displayGalleryOnMainPage();
         displayGalleryInSettings();
         showNotification(t('gallery.deleted'), 'info');
+        
+        // 🔥 إرسال تحديث للجميع
+        if (window.forceUpdateForAll) {
+            setTimeout(() => {
+                window.forceUpdateForAll();
+            }, 100);
+        }
     }
 }
 
@@ -932,6 +1246,11 @@ function formatFileSize(bytes) {
 
 function saveGalleryImages() {
     localStorage.setItem('barbershopGallery', JSON.stringify(galleryImages));
+    
+    // 🔥 حفظ في Firebase إذا كان متاحاً
+    if (window.saveGalleryToFirebase) {
+        window.saveGalleryToFirebase(galleryImages);
+    }
 }
 
 function loadGalleryImages() {
@@ -1054,6 +1373,13 @@ function handleBackgroundFile(file) {
             applyBackgroundImage();
             displayBackgroundPreview();
             showNotification(t('background.changed'), 'success');
+            
+            // 🔥 إرسال تحديث للجميع
+            if (window.forceUpdateForAll) {
+                setTimeout(() => {
+                    window.forceUpdateForAll();
+                }, 100);
+            }
         };
         reader.readAsDataURL(file);
     } else {
@@ -1154,14 +1480,31 @@ function removeBackground() {
         applyBackgroundImage();
         displayBackgroundPreview();
         showNotification(t('background.removed'), 'info');
+        
+        // 🔥 إرسال تحديث للجميع
+        if (window.forceUpdateForAll) {
+            setTimeout(() => {
+                window.forceUpdateForAll();
+            }, 100);
+        }
     }
 }
 
 function saveBackgroundImage() {
     if (currentBackground) {
         localStorage.setItem('barbershopBackground', JSON.stringify(currentBackground));
+        
+        // 🔥 حفظ في Firebase إذا كان متاحاً
+        if (window.saveBackgroundToFirebase) {
+            window.saveBackgroundToFirebase(currentBackground);
+        }
     } else {
         localStorage.removeItem('barbershopBackground');
+        
+        // 🔥 حذف من Firebase إذا كان متاحاً
+        if (window.removeBackgroundFromFirebase) {
+            window.removeBackgroundFromFirebase();
+        }
     }
 }
 
@@ -1173,29 +1516,86 @@ function loadBackgroundImage() {
     }
 }
 
-// Auto refresh visitors when settings change (polls every 3 seconds)
-(function setupAutoRefresh() {
-    const CHECK_INTERVAL_MS = 3000;
-    let lastVersion = null;
+// =================== 🔥 نظام التحديث اليدوي ===================
 
-    async function checkVersion() {
-        try {
-            const res = await fetch('settings-version.json?ts=' + Date.now(), { cache: 'no-store' });
-            if (!res.ok) return;
-            const data = await res.json();
-            const current = (typeof data.version !== 'undefined') ? data.version : (data.updatedAt || JSON.stringify(data));
-            if (lastVersion === null) {
-                lastVersion = current;
-                return;
-            }
-            if (current !== lastVersion) {
-                location.reload();
-            }
-        } catch (_) {
-            // Ignore network errors; keep polling
+// زر تحديث يدوي يظهر في الصفحة
+function addManualRefreshButton() {
+    // تحقق إذا كان الزر موجوداً مسبقاً
+    if (document.getElementById('manualRefreshBtn')) return;
+    
+    const refreshBtn = document.createElement('button');
+    refreshBtn.id = 'manualRefreshBtn';
+    refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> تحديث الآن';
+    refreshBtn.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 25px;
+        font-size: 14px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 3px 15px rgba(52, 152, 219, 0.4);
+        z-index: 9999;
+        transition: all 0.3s;
+    `;
+    
+    refreshBtn.onmouseover = function() {
+        this.style.transform = 'translateY(-2px)';
+        this.style.boxShadow = '0 5px 20px rgba(52, 152, 219, 0.6)';
+    };
+    
+    refreshBtn.onmouseout = function() {
+        this.style.transform = 'translateY(0)';
+        this.style.boxShadow = '0 3px 15px rgba(52, 152, 219, 0.4)';
+    };
+    
+    refreshBtn.onclick = function() {
+        // إضافة تأثير دوران للزر
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحديث...';
+        this.disabled = true;
+        
+        // تحديث جميع البيانات
+        if (window.loadAllData) {
+            window.loadAllData().then(() => {
+                // استعادة الزر بعد التحديث
+                setTimeout(() => {
+                    this.innerHTML = '<i class="fas fa-sync-alt"></i> تحديث الآن';
+                    this.disabled = false;
+                    if (window.showNotification) {
+                        window.showNotification('✅ تم تحديث البيانات بنجاح', 'success');
+                    }
+                }, 1000);
+            }).catch(() => {
+                // في حالة فشل التحديث
+                this.innerHTML = '<i class="fas fa-exclamation-triangle"></i> فشل التحديث';
+                setTimeout(() => {
+                    this.innerHTML = '<i class="fas fa-sync-alt"></i> تحديث الآن';
+                    this.disabled = false;
+                }, 2000);
+            });
+        } else {
+            // إعادة تحميل الصفحة إذا فشل التحديث
+            location.reload();
         }
-    }
+    };
+    
+    document.body.appendChild(refreshBtn);
+    
+    // إظهار إشعار عند ظهور الزر
+    setTimeout(() => {
+        if (window.showNotification) {
+            window.showNotification('🔄 يمكنك استخدام زر التحديث في الزاوية السفلية', 'info');
+        }
+    }, 3000);
+}
 
-    setInterval(checkVersion, CHECK_INTERVAL_MS);
-    checkVersion();
-})();
+// إضافة زر التحديث عند تحميل الصفحة
+setTimeout(addManualRefreshButton, 2000);
+
+// =================== 🔥 نهاية النظام اليدوي ===================
