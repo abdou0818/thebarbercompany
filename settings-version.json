@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "updatedAt": "2025-10-18T20:51:21.129087+00:00",
+  "settings": {
+    "name": "صالون الحلاقة",
+    "subtitle": "أفضل خدمات الحلاقة والتجميل",
+    "chairCount": 3,
+    "maxWaiting": 20
+  }
+}

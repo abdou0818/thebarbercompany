@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>صالون الحلاقة الملكي</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="settings-icon" onclick="openPasswordModal()">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <div class="lang-switcher" id="langSwitcher">
+                    <button class="lang-current" id="langCurrentBtn" aria-label="Language">
+                        <i class="fas fa-globe"></i>
+                        <span class="lang-label">ع</span>
+                    </button>
+                    <div class="lang-menu" id="langMenu">
+                        <button type="button" data-lang="ar">عربية</button>
+                        <button type="button" data-lang="fr">Français</button>
+                        <button type="button" data-lang="en">English</button>
+                    </div>
+                </div>
+                <h1 class="shop-name" data-i18n="app.title">صالون الحلاقة الملكي</h1>
+                <p class="shop-subtitle" data-i18n="app.subtitle">أفضل خدمات الحلاقة والتجميل</p>
+            </div>
+        </header>
+
+
+
+        <!-- Waiting Customers -->
+        <section class="waiting-section">
+            <div class="waiting-card">
+                <h3 data-i18n="waiting.title">العملاء المنتظرون</h3>
+                <div class="waiting-counter">
+                    <span id="waiting-count">0</span>
+                </div>
+                <p data-i18n="waiting.unit">عملاء</p>
+            </div>
+        </section>
+
+        <!-- Chairs Section -->
+        <section class="chairs-section">
+            <h2 data-i18n="chairs.title">الكراسي</h2>
+            <div class="chairs-grid">
+                <div class="chair-card" data-chair="1">
+                    <div class="chair-icon">
+                        <i class="fas fa-chair"></i>
+                    </div>
+                    <h3>كرسي 1</h3>
+                    <span class="chair-status available">متاح</span>
+                </div>
+                
+                <div class="chair-card" data-chair="2">
+                    <div class="chair-icon">
+                        <i class="fas fa-chair"></i>
+                    </div>
+                    <h3>كرسي 2</h3>
+                    <span class="chair-status available">متاح</span>
+                </div>
+                
+                <div class="chair-card" data-chair="3">
+                    <div class="chair-icon">
+                        <i class="fas fa-chair"></i>
+                    </div>
+                    <h3>كرسي 3</h3>
+                    <span class="chair-status available">متاح</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Gallery Section -->
+        <section class="gallery-section">
+            <h2 data-i18n="gallery.title">معرض الصور</h2>
+            <div class="gallery-container" id="galleryContainer">
+                <div class="no-images-message" id="noImagesMessage">
+                    <i class="fas fa-images"></i>
+                    <p data-i18n="gallery.no_images_title">لا توجد صور في المعرض</p>
+                    <p class="sub-text" data-i18n="gallery.no_images_sub">يمكن إضافة الصور من الإعدادات</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Social Media -->
+        <section class="social-media">
+            <h2 data-i18n="social.title">وسائل التواصل الاجتماعي</h2>
+            <div class="social-links">
+                <a href="#" class="social-link instagram">
+                    <i class="fab fa-instagram"></i>
+                    <span data-i18n="social.instagram">Instagram</span>
+                </a>
+                <a href="#" class="social-link tiktok">
+                    <i class="fab fa-tiktok"></i>
+                    <span data-i18n="social.tiktok">TikTok</span>
+                </a>
+                <a href="tel:+966123456789" class="social-link phone">
+                    <i class="fas fa-phone"></i>
+                    <span data-i18n="social.phone">الهاتف</span>
+                </a>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2024 صالون الحلاقة الملكي. <span data-i18n="footer.rights">جميع الحقوق محفوظة.</span></p>
+        </footer>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="passwordModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closePasswordModal()">&times;</span>
+            <h2>إدخال الرمز السري</h2>
+            <p>يرجى إدخال الرمز السري للوصول إلى الإعدادات</p>
+            <input type="password" id="passwordInput" placeholder="الرمز السري" maxlength="6">
+            <div class="modal-buttons">
+                <button onclick="checkPassword()" class="confirm-btn">تأكيد</button>
+                <button onclick="closePasswordModal()" class="cancel-btn">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content settings-content">
+            <span class="close" onclick="closeSettingsModal()">&times;</span>
+            <h2>إعدادات الصالون</h2>
+            
+            <div class="settings-section">
+                <h3>معلومات الصالون</h3>
+                <div class="setting-item">
+                    <label>اسم الصالون:</label>
+                    <input type="text" id="shopName" value="صالون الحلاقة الملكي">
+                </div>
+                <div class="setting-item">
+                    <label>الوصف:</label>
+                    <input type="text" id="shopSubtitle" value="أفضل خدمات الحلاقة والتجميل">
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>إعدادات الأمان</h3>
+                <div class="setting-item">
+                    <label>الرمز السري الحالي:</label>
+                    <input type="password" id="currentPassword" placeholder="الرمز الحالي">
+                </div>
+                <div class="setting-item">
+                    <label>الرمز السري الجديد:</label>
+                    <input type="password" id="newPassword" placeholder="الرمز الجديد" maxlength="6">
+                </div>
+                <div class="setting-item">
+                    <label>تأكيد الرمز الجديد:</label>
+                    <input type="password" id="confirmPassword" placeholder="تأكيد الرمز" maxlength="6">
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>التحكم في الكراسي</h3>
+                <div class="chair-controls">
+                    <div class="chair-control-item">
+                        <span>كرسي 1:</span>
+                        <button class="chair-control-btn available" onclick="toggleChair(1)" id="chairBtn1">متاح</button>
+                    </div>
+                    <div class="chair-control-item">
+                        <span>كرسي 2:</span>
+                        <button class="chair-control-btn available" onclick="toggleChair(2)" id="chairBtn2">متاح</button>
+                    </div>
+                    <div class="chair-control-item">
+                        <span>كرسي 3:</span>
+                        <button class="chair-control-btn available" onclick="toggleChair(3)" id="chairBtn3">متاح</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>الإجراءات السريعة</h3>
+                <div class="quick-actions-settings">
+                    <button class="action-btn" onclick="addCustomer()">
+                        <i class="fas fa-user-plus"></i>
+                        إضافة عميل
+                    </button>
+                    <button class="action-btn" onclick="removeCustomer()">
+                        <i class="fas fa-user-minus"></i>
+                        إزالة عميل
+                    </button>
+                    <button class="action-btn" onclick="resetQueue()">
+                        <i class="fas fa-refresh"></i>
+                        إعادة تعيين
+                    </button>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>إدارة جهات الاتصال</h3>
+                <div class="contact-management">
+                    <div class="add-contact-form">
+                        <div class="contact-input-group">
+                            <select id="contactType" class="contact-type-select">
+                                <option value="">اختر نوع التواصل</option>
+                                <option value="instagram">انستغرام</option>
+                                <option value="facebook">فيسبوك</option>
+                                <option value="tiktok">تيك توك</option>
+                                <option value="twitter">تويتر</option>
+                                <option value="youtube">يوتيوب</option>
+                                <option value="snapchat">سناب شات</option>
+                                <option value="whatsapp">واتساب</option>
+                                <option value="telegram">تيليجرام</option>
+                                <option value="linkedin">لينكد إن</option>
+                                <option value="phone">هاتف</option>
+                                <option value="email">إيميل</option>
+                                <option value="website">موقع إلكتروني</option>
+                                <option value="location">الموقع</option>
+                            </select>
+                            <input type="text" id="contactValue" placeholder="الرابط أو المعلومات" class="contact-input">
+                            <button onclick="addContact()" class="add-contact-btn">
+                                <i class="fas fa-plus"></i>
+                                إضافة
+                            </button>
+                        </div>
+                    </div>
+                    <div class="contacts-list" id="contactsList">
+                        <!-- سيتم إضافة جهات الاتصال هنا ديناميكياً -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>إدارة معرض الصور</h3>
+                <div class="gallery-management">
+                    <div class="upload-section">
+                        <div class="upload-area" id="uploadArea">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>اسحب الصور هنا أو انقر للاختيار</p>
+                            <input type="file" id="imageInput" accept="image/*" multiple style="display: none;">
+                            <button onclick="document.getElementById('imageInput').click()" class="upload-btn">
+                                <i class="fas fa-plus"></i>
+                                اختيار الصور
+                            </button>
+                        </div>
+                    </div>
+                    <div class="gallery-management-list" id="galleryManagementList">
+                        <!-- سيتم إضافة الصور هنا ديناميكياً -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>إدارة خلفية الصفحة</h3>
+                <div class="background-management">
+                    <div class="current-background">
+                        <h4>الخلفية الحالية</h4>
+                        <div class="background-preview" id="backgroundPreview">
+                            <div class="no-background-message" id="noBackgroundMessage">
+                                <i class="fas fa-image"></i>
+                                <p>لا توجد خلفية مخصصة</p>
+                                <small>سيتم استخدام الخلفية الافتراضية</small>
+                            </div>
+                        </div>
+                        <div class="background-actions">
+                            <button onclick="removeBackground()" class="remove-bg-btn" id="removeBackgroundBtn" style="display: none;">
+                                <i class="fas fa-trash"></i>
+                                إزالة الخلفية
+                            </button>
+                        </div>
+                    </div>
+                    <div class="background-upload-section">
+                        <h4>رفع خلفية جديدة</h4>
+                        <div class="background-upload-area" id="backgroundUploadArea">
+                            <i class="fas fa-image"></i>
+                            <p>اسحب صورة الخلفية هنا أو انقر للاختيار</p>
+                            <small>يُنصح باستخدام صور عالية الجودة (1920x1080 أو أكبر)</small>
+                            <input type="file" id="backgroundInput" accept="image/*" style="display: none;">
+                            <button onclick="document.getElementById('backgroundInput').click()" class="upload-bg-btn">
+                                <i class="fas fa-upload"></i>
+                                اختيار صورة الخلفية
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>إعدادات النظام</h3>
+                <div class="setting-item">
+                    <label>عدد الكراسي:</label>
+                    <select id="chairCount">
+                        <option value="3" selected>3 كراسي</option>
+                        <option value="4">4 كراسي</option>
+                        <option value="5">5 كراسي</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <label>الحد الأقصى للعملاء المنتظرين:</label>
+                    <input type="number" id="maxWaiting" value="20" min="1" max="100">
+                </div>
+            </div>
+
+            <div class="modal-buttons">
+                <button onclick="saveSettings()" class="confirm-btn">حفظ التغييرات</button>
+                <button onclick="resetSettings()" class="reset-btn">إعادة تعيين</button>
+                <button onclick="closeSettingsModal()" class="cancel-btn">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="i18n.js"></script>
+    <script src="script.js"></script>
+    <script src="api-integration.js"></script>
+    <script>window.__apiIntegrationLoaded = true;</script>
+  <script type="module" src="./firebase-init.js"></script>
+  
+  <!-- Firestore Integration - نظام موحد لجميع البيانات -->
+  <script type="module">
+    import { getApp } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js';
+    import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js';
+    import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js';
+
+    // استخدم التطبيق الافتراضي الذي تم تهيئته في firebase-init.js
+    const app = getApp();
+    const auth = getAuth(app);
+    try {
+      await signInAnonymously(auth);
+      console.log('Firebase Auth: تم تسجيل الدخول المجهول بنجاح');
+    } catch (e) {
+      console.warn('Firebase Auth: فشل التسجيل المجهول، سيتم الاعتماد على قواعد القراءة العامة إن وُجدت:', e?.code || e?.message || e);
+    }
+    const db = getFirestore(app);
+
+    // مراجع الوثائق
+    const settingsDoc = doc(db, 'siteSettings', 'main');
+    const contactsDoc = doc(db, 'siteContacts', 'main');
+    const galleryDoc = doc(db, 'siteGallery', 'main');
+    const backgroundDoc = doc(db, 'siteBackground', 'main');
+
+    // تطبيق الإعدادات القادمة من Firestore على الواجهة
+    function applySettings(settings) {
+      if (!settings || typeof settings !== 'object') return;
+      try {
+        if (typeof window.shopSettings === 'undefined') window.shopSettings = {};
+        window.shopSettings = { ...window.shopSettings, ...settings };
+        const nameEl = document.querySelector('.shop-name');
+        const subtitleEl = document.querySelector('.shop-subtitle');
+        if (nameEl && window.shopSettings?.name) nameEl.textContent = window.shopSettings.name;
+        if (subtitleEl && window.shopSettings?.subtitle) subtitleEl.textContent = window.shopSettings.subtitle;
+        if (typeof window.updateChairCount === 'function' && typeof window.shopSettings?.chairCount === 'number') {
+          window.updateChairCount(window.shopSettings.chairCount);
+        }
+        if (typeof window.shopSettings?.maxWaiting === 'number') {
+          const wcEl = document.getElementById('maxWaiting');
+          if (wcEl) wcEl.value = String(window.shopSettings.maxWaiting);
+        }
+        if (settings.color) document.body.style.backgroundColor = settings.color;
+        // حفظ محلي
+        try { localStorage.setItem('barbershopSettings', JSON.stringify(window.shopSettings)); } catch {}
+        console.log('Firestore: تم تطبيق الإعدادات بنجاح');
+      } catch (e) {
+        console.warn('Firestore: فشل تطبيق الإعدادات', e);
+      }
+    }
+
+    // تطبيق جهات الاتصال
+    function applyContacts(contacts) {
+      try {
+        window.contacts = Array.isArray(contacts) ? contacts : [];
+        localStorage.setItem('barbershopContacts', JSON.stringify(window.contacts));
+        if (typeof window.displayContactsInSettings === 'function') window.displayContactsInSettings();
+        if (typeof window.displayContactsOnMainPage === 'function') window.displayContactsOnMainPage();
+        console.log('Firestore: تم تطبيق جهات الاتصال بنجاح');
+      } catch (e) {
+        console.warn('Firestore: فشل تطبيق جهات الاتصال', e);
+      }
+    }
+
+    // تطبيق المعرض
+    function applyGallery(images) {
+      try {
+        window.galleryImages = Array.isArray(images) ? images : [];
+        localStorage.setItem('barbershopGallery', JSON.stringify(window.galleryImages));
+        if (typeof window.updateGalleryUI === 'function') window.updateGalleryUI();
+        console.log('Firestore: تم تطبيق المعرض بنجاح');
+      } catch (e) {
+        console.warn('Firestore: فشل تطبيق المعرض', e);
+      }
+    }
+
+    // تطبيق الخلفية
+    function applyBackground(bg) {
+      try {
+        window.currentBackground = bg || null;
+        localStorage.setItem('barbershopBackground', JSON.stringify(window.currentBackground));
+        if (typeof window.applyBackgroundImage === 'function') window.applyBackgroundImage();
+        console.log('Firestore: تم تطبيق الخلفية بنجاح');
+      } catch (e) {
+        console.warn('Firestore: فشل تطبيق الخلفية', e);
+      }
+    }
+
+    // حفظ البيانات إلى Firestore
+    async function saveSettings() {
+      try {
+        const payload = typeof window.shopSettings === 'object' ? window.shopSettings : {};
+        await setDoc(settingsDoc, payload, { merge: true });
+        console.log('Firestore: تم حفظ الإعدادات بنجاح');
+      } catch (e) {
+        console.error('Firestore: فشل حفظ الإعدادات', e);
+      }
+    }
+
+    async function saveContacts() {
+      try {
+        const contacts = Array.isArray(window.contacts) ? window.contacts : [];
+        await setDoc(contactsDoc, { contacts }, { merge: true });
+        console.log('Firestore: تم حفظ جهات الاتصال بنجاح');
+      } catch (e) {
+        console.error('Firestore: فشل حفظ جهات الاتصال', e);
+      }
+    }
+
+    async function saveGallery() {
+      try {
+        const images = Array.isArray(window.galleryImages) ? window.galleryImages : [];
+        await setDoc(galleryDoc, { images }, { merge: true });
+        console.log('Firestore: تم حفظ المعرض بنجاح');
+      } catch (e) {
+        console.error('Firestore: فشل حفظ المعرض', e);
+      }
+    }
+
+    async function saveBackground() {
+      try {
+        const bg = window.currentBackground || null;
+        await setDoc(backgroundDoc, { background: bg }, { merge: true });
+        console.log('Firestore: تم حفظ الخلفية بنجاح');
+      } catch (e) {
+        console.error('Firestore: فشل حفظ الخلفية', e);
+      }
+    }
+
+    // تحميل البيانات الأولية
+    async function loadAllData() {
+      try {
+        const [settingsSnap, contactsSnap, gallerySnap, backgroundSnap] = await Promise.all([
+          getDoc(settingsDoc),
+          getDoc(contactsDoc),
+          getDoc(galleryDoc),
+          getDoc(backgroundDoc)
+        ]);
+
+        if (settingsSnap.exists()) applySettings(settingsSnap.data());
+        if (contactsSnap.exists()) applyContacts(contactsSnap.data().contacts);
+        if (gallerySnap.exists()) applyGallery(gallerySnap.data().images);
+        if (backgroundSnap.exists()) applyBackground(backgroundSnap.data().background);
+
+        console.log('Firestore: تم تحميل جميع البيانات بنجاح');
+      } catch (e) {
+        console.error('Firestore: فشل تحميل البيانات', e);
+      }
+    }
+
+    // مراقبة التغييرات في الوقت الحقيقي
+    onSnapshot(settingsDoc, (docSnap) => {
+      if (docSnap.exists()) {
+        console.log('Firestore: تحديث الإعدادات لحظياً');
+        applySettings(docSnap.data());
+      }
+    });
+
+    onSnapshot(contactsDoc, (docSnap) => {
+      if (docSnap.exists()) {
+        console.log('Firestore: تحديث جهات الاتصال لحظياً');
+        applyContacts(docSnap.data().contacts);
+      }
+    });
+
+    onSnapshot(galleryDoc, (docSnap) => {
+      if (docSnap.exists()) {
+        console.log('Firestore: تحديث المعرض لحظياً');
+        applyGallery(docSnap.data().images);
+      }
+    });
+
+    onSnapshot(backgroundDoc, (docSnap) => {
+      if (docSnap.exists()) {
+        console.log('Firestore: تحديث الخلفية لحظياً');
+        applyBackground(docSnap.data().background);
+      }
+    });
+
+    // ربط عمليات الحفظ الموجودة
+    function wrapAfter(fnName, after){
+      const orig = window[fnName];
+      if (typeof orig !== 'function') return;
+      window[fnName] = function(){
+        const r = orig.apply(this, arguments);
+        try { after.apply(this, arguments); } catch(_) {}
+        return r;
+      };
+    }
+
+    // تصدير الدوال للاستخدام العام
+    window.saveSettings = saveSettings;
+    window.saveContacts = saveContacts;
+    window.saveGallery = saveGallery;
+    window.saveBackground = saveBackground;
+    window.loadAllData = loadAllData;
+
+    // تهيئة النظام عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', () => {
+      loadAllData();
+      
+      // ربط عمليات الحفظ
+      wrapAfter('saveSettings', () => { saveSettings().catch(console.warn); });
+      wrapAfter('resetSettings', () => { saveSettings().catch(console.warn); });
+      wrapAfter('saveContacts', () => { saveContacts().catch(console.warn); });
+      wrapAfter('deleteContact', () => { saveContacts().catch(console.warn); });
+      wrapAfter('handleImageFiles', () => { saveGallery().catch(console.warn); });
+      wrapAfter('deleteImage', () => { saveGallery().catch(console.warn); });
+      wrapAfter('saveBackgroundImage', () => { saveBackground().catch(console.warn); });
+      wrapAfter('removeBackground', () => { saveBackground().catch(console.warn); });
+    });
+  </script>
+</body>
+</html>
